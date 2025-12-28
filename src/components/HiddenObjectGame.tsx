@@ -3,16 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Check, ArrowLeft, Sparkles } from 'lucide-react';
 import greenParkImage from '@/assets/green_park.webp';
 
-// Hidden objects positioned on top of actual objects in the garden scene
+// Hidden objects positioned precisely on the actual objects in the image
+// Coordinates are percentages from top-left of the image
 const GARDEN_OBJECTS = [
-  { id: 'teacup', name: 'Teacup', x: 10, y: 54, width: 6, height: 10 },
-  { id: 'book', name: 'Blue Book', x: 14, y: 58, width: 6, height: 8 },
-  { id: 'hat', name: 'Straw Hat', x: 20, y: 46, width: 14, height: 12 },
-  { id: 'blanket', name: 'Blue Blanket', x: 34, y: 40, width: 14, height: 18 },
-  { id: 'basket', name: 'Plant Basket', x: 46, y: 60, width: 10, height: 14 },
-  { id: 'wateringcan', name: 'Watering Can', x: 58, y: 54, width: 12, height: 20 },
-  { id: 'picnicbasket', name: 'Picnic Basket', x: 70, y: 62, width: 12, height: 16 },
-  { id: 'trellis', name: 'Garden Trellis', x: 66, y: 14, width: 16, height: 28 },
+  { id: 'teacup', name: 'Teacup', emoji: '☕', x: 7, y: 53, width: 7, height: 12 },
+  { id: 'book', name: 'Book', emoji: '📘', x: 12, y: 56, width: 7, height: 10 },
+  { id: 'hat', name: 'Hat', emoji: '👒', x: 17, y: 44, width: 15, height: 14 },
+  { id: 'blanket', name: 'Blanket', emoji: '🧣', x: 33, y: 38, width: 18, height: 22 },
+  { id: 'plantbasket', name: 'Basket', emoji: '🧺', x: 44, y: 58, width: 12, height: 16 },
+  { id: 'wateringcan', name: 'Watering Can', emoji: '🚿', x: 57, y: 52, width: 14, height: 24 },
+  { id: 'picnicbasket', name: 'Picnic Basket', emoji: '🧺', x: 69, y: 60, width: 14, height: 18 },
+  { id: 'trellis', name: 'Trellis', emoji: '🪴', x: 64, y: 10, width: 18, height: 35 },
 ];
 
 interface HiddenObjectGameProps {
@@ -91,24 +92,24 @@ export const HiddenObjectGame: React.FC<HiddenObjectGameProps> = ({
         </div>
 
         {/* Game Area */}
-        <div className="relative rounded-3xl overflow-hidden shadow-card mb-6 bg-sage-light/20 aspect-[3/2]">
+        <div className="relative rounded-3xl overflow-hidden shadow-card mb-6">
           <img 
             src={greenParkImage} 
             alt="A peaceful garden park scene with a wooden bench, flowers, and greenery"
-            className="w-full h-full object-cover"
+            className="w-full h-auto block"
           />
           
-          {/* Clickable areas for hidden objects */}
+          {/* Clickable hitboxes positioned directly over objects */}
           {GARDEN_OBJECTS.map((obj) => (
             <button
               key={obj.id}
               onClick={() => handleObjectClick(obj.id)}
-              className={`absolute transition-all duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber focus:ring-offset-2 ${
+              className={`absolute border-2 transition-all duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber focus:ring-offset-2 ${
                 foundObjects.includes(obj.id)
-                  ? 'bg-sage/40 ring-2 ring-sage pointer-events-none'
+                  ? 'bg-sage/50 border-sage'
                   : showHints
-                  ? 'bg-amber/30 hover:bg-amber/50 ring-2 ring-amber/50'
-                  : 'hover:bg-cream/20'
+                  ? 'bg-amber/30 border-amber/70 hover:bg-amber/50'
+                  : 'border-transparent hover:bg-cream/30 hover:border-cream/50'
               }`}
               style={{
                 left: `${obj.x}%`,
@@ -121,7 +122,7 @@ export const HiddenObjectGame: React.FC<HiddenObjectGameProps> = ({
             >
               {foundObjects.includes(obj.id) && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Check className="w-6 h-6 text-sage drop-shadow-md" />
+                  <Check className="w-8 h-8 text-white drop-shadow-lg" />
                 </div>
               )}
             </button>
@@ -138,24 +139,31 @@ export const HiddenObjectGame: React.FC<HiddenObjectGameProps> = ({
           )}
         </div>
 
-        {/* Objects to find */}
+        {/* Objects to find - Visual list with emojis */}
         <div className="bg-cream-dark/50 rounded-2xl p-6">
           <h3 className="font-display text-lg text-foreground mb-4 text-center">
-            Objects to Find ({foundObjects.length} of {GARDEN_OBJECTS.length})
+            Find these objects ({foundObjects.length}/{GARDEN_OBJECTS.length})
           </h3>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 justify-items-center">
             {GARDEN_OBJECTS.map((obj) => (
               <div
                 key={obj.id}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
                   foundObjects.includes(obj.id)
-                    ? 'bg-sage/20 text-sage line-through'
-                    : 'bg-cream text-foreground'
+                    ? 'bg-sage/20 opacity-50'
+                    : 'bg-cream'
                 }`}
               >
-                {obj.name}
+                <span className="text-3xl" role="img" aria-label={obj.name}>
+                  {obj.emoji}
+                </span>
+                <span className={`text-xs font-medium text-center ${
+                  foundObjects.includes(obj.id) ? 'line-through text-muted-foreground' : 'text-foreground'
+                }`}>
+                  {obj.name}
+                </span>
                 {foundObjects.includes(obj.id) && (
-                  <Check className="w-4 h-4 inline ml-2" />
+                  <Check className="w-4 h-4 text-sage" />
                 )}
               </div>
             ))}
@@ -164,7 +172,7 @@ export const HiddenObjectGame: React.FC<HiddenObjectGameProps> = ({
 
         {/* Hint toggle info */}
         <p className="text-center text-sm text-muted-foreground mt-4">
-          {showHints ? 'Hints are showing • Click the eye to hide them' : 'Tap the eye icon if you need hints'}
+          {showHints ? 'Hints showing • Tap eye to hide' : 'Need help? Tap the eye icon for hints'}
         </p>
       </div>
     </div>
