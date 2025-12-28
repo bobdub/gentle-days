@@ -74,10 +74,9 @@ const Index = () => {
         />
       )}
 
-      {currentView === 'activity' && selectedDayData && (
+      {currentView === 'activity' && selectedDay && (
         <HiddenObjectGame
-          dayData={selectedDayData}
-          startDate={state.startDate}
+          dayNumber={selectedDay}
           onComplete={handleCompleteActivity}
           onBack={() => setCurrentView('calendar')}
         />
