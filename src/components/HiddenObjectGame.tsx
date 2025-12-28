@@ -3,16 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Check, ArrowLeft, Sparkles } from 'lucide-react';
 import greenParkImage from '@/assets/green_park.webp';
 
-// Hidden objects that exist in the garden park scene
+// Hidden objects positioned on top of actual objects in the garden scene
 const GARDEN_OBJECTS = [
-  { id: 'teacup', name: 'Teacup', x: 8, y: 58, width: 6, height: 8 },
-  { id: 'book', name: 'Blue Book', x: 10, y: 62, width: 5, height: 6 },
-  { id: 'hat', name: 'Straw Hat', x: 18, y: 52, width: 10, height: 8 },
-  { id: 'blanket', name: 'Blue Blanket', x: 32, y: 48, width: 12, height: 10 },
-  { id: 'basket', name: 'Plant Basket', x: 42, y: 68, width: 8, height: 8 },
-  { id: 'wateringcan', name: 'Watering Can', x: 62, y: 65, width: 10, height: 12 },
-  { id: 'picnicbasket', name: 'Picnic Basket', x: 72, y: 70, width: 10, height: 10 },
-  { id: 'trellis', name: 'Garden Trellis', x: 72, y: 22, width: 12, height: 18 },
+  { id: 'teacup', name: 'Teacup', x: 10, y: 54, width: 6, height: 10 },
+  { id: 'book', name: 'Blue Book', x: 14, y: 58, width: 6, height: 8 },
+  { id: 'hat', name: 'Straw Hat', x: 20, y: 46, width: 14, height: 12 },
+  { id: 'blanket', name: 'Blue Blanket', x: 34, y: 40, width: 14, height: 18 },
+  { id: 'basket', name: 'Plant Basket', x: 46, y: 60, width: 10, height: 14 },
+  { id: 'wateringcan', name: 'Watering Can', x: 58, y: 54, width: 12, height: 20 },
+  { id: 'picnicbasket', name: 'Picnic Basket', x: 70, y: 62, width: 12, height: 16 },
+  { id: 'trellis', name: 'Garden Trellis', x: 66, y: 14, width: 16, height: 28 },
 ];
 
 interface HiddenObjectGameProps {
