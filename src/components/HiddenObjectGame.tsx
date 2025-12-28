@@ -1,45 +1,71 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, Eye, Sparkles } from 'lucide-react';
 import { HiddenObject, DayData } from '@/types/calendar';
 import { cn } from '@/lib/utils';
+import {
+  createDailyHiddenObjectState,
+  dateToSeed,
+  DailyObjectPlacement,
+} from '@/lib/hiddenObjectGame';
 
 interface HiddenObjectGameProps {
   dayData: DayData;
+  startDate: Date;
   onComplete: () => void;
   onBack: () => void;
 }
 
-// Pre-defined objects for the garden scene
-const GARDEN_OBJECTS: HiddenObject[] = [
-  { id: '1', name: 'Butterfly', x: 15, y: 20, width: 8, height: 8, found: false },
-  { id: '2', name: 'Watering Can', x: 70, y: 65, width: 10, height: 12, found: false },
-  { id: '3', name: 'Bird', x: 45, y: 12, width: 7, height: 6, found: false },
-  { id: '4', name: 'Ladybug', x: 85, y: 40, width: 5, height: 5, found: false },
-  { id: '5', name: 'Garden Gloves', x: 25, y: 75, width: 9, height: 7, found: false },
-  { id: '6', name: 'Snail', x: 55, y: 80, width: 6, height: 5, found: false },
-];
+const buildHiddenObjects = (placements: DailyObjectPlacement[]): HiddenObject[] => {
+  return placements.map(({ object, location }) => ({
+    id: object.id,
+    name: object.name,
+    x: location.x,
+    y: location.y,
+    width: location.width,
+    height: location.height,
+    found: false,
+  }));
+};
 
-export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGameProps) {
-  const [objects, setObjects] = useState<HiddenObject[]>(GARDEN_OBJECTS);
+export function HiddenObjectGame({ dayData, startDate, onComplete, onBack }: HiddenObjectGameProps) {
+  const dailyDate = useMemo(() => {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + dayData.day - 1);
+    return date;
+  }, [startDate, dayData.day]);
+
+  const dailyState = useMemo(() => {
+    const seed = dateToSeed(dailyDate);
+    return createDailyHiddenObjectState({ seed });
+  }, [dailyDate]);
+
+  const [objects, setObjects] = useState<HiddenObject[]>(() =>
+    buildHiddenObjects(dailyState.dailyPlacements)
+  );
   const [isCompleted, setIsCompleted] = useState(false);
   const [showHint, setShowHint] = useState(false);
 
+  useEffect(() => {
+    setObjects(buildHiddenObjects(dailyState.dailyPlacements));
+    setIsCompleted(false);
+    setShowHint(false);
+  }, [dailyState]);
+
   const foundCount = objects.filter(obj => obj.found).length;
   const totalCount = objects.length;
-  const remainingObjects = objects.filter(obj => !obj.found);
 
   const handleObjectClick = useCallback((id: string) => {
     setObjects(prev => {
-      const updated = prev.map(obj => 
+      const updated = prev.map(obj =>
         obj.id === id ? { ...obj, found: true } : obj
       );
-      
+
       const allFound = updated.every(obj => obj.found);
       if (allFound) {
         setTimeout(() => setIsCompleted(true), 500);
       }
-      
+
       return updated;
     });
   }, []);
@@ -56,15 +82,15 @@ export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGa
           <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-sage-light to-amber-light flex items-center justify-center shadow-card">
             <Sparkles className="w-12 h-12 text-primary" />
           </div>
-          
+
           <h2 className="text-3xl font-display font-semibold text-foreground mb-4">
             Beautifully done
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            You found all the hidden treasures in today's garden scene. 
+            You found all the hidden treasures in today's garden scene.
             Take a moment to appreciate the peaceful morning.
           </p>
-          
+
           <div className="card-gentle mb-8">
             <p className="font-display italic text-primary">
               "{dayData.title}"
@@ -106,7 +132,7 @@ export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGa
               </p>
             </div>
           </div>
-          
+
           <div className="text-right">
             <div className="text-lg font-semibold text-foreground">
               {foundCount} / {totalCount}
@@ -119,15 +145,15 @@ export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGa
         <div className="relative rounded-3xl overflow-hidden shadow-card mb-6 bg-gradient-to-br from-sage-light via-cream to-rose-light aspect-video">
           {/* Garden scene placeholder - beautiful gradient background */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-light/50 via-sage-light/30 to-rose-light/40" />
-          
+
           {/* Decorative elements */}
           <div className="absolute inset-0">
             {/* Ground */}
             <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-sage/20 to-transparent" />
-            
+
             {/* Sun */}
             <div className="absolute top-8 right-12 w-16 h-16 rounded-full bg-gradient-to-br from-amber to-amber-light opacity-60 blur-sm" />
-            
+
             {/* Flowers */}
             <div className="absolute bottom-16 left-1/4 w-8 h-12 flex flex-col items-center">
               <div className="w-6 h-6 rounded-full bg-rose/80" />
@@ -142,7 +168,7 @@ export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGa
               <div className="w-1 h-6 bg-sage" />
             </div>
           </div>
-          
+
           {/* Clickable hidden objects */}
           {objects.map(obj => (
             <button
@@ -150,8 +176,8 @@ export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGa
               onClick={() => !obj.found && handleObjectClick(obj.id)}
               className={cn(
                 "absolute rounded-full transition-all duration-500 focus-visible:outline-none",
-                obj.found 
-                  ? "bg-primary/30 ring-4 ring-primary/50 scale-110" 
+                obj.found
+                  ? "bg-primary/30 ring-4 ring-primary/50 scale-110"
                   : "hover:bg-foreground/10 cursor-pointer",
                 showHint && !obj.found && "animate-pulse-soft bg-accent/20"
               )}
@@ -189,7 +215,7 @@ export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGa
               {showHint ? 'Hide hints' : 'Show hints'}
             </Button>
           </div>
-          
+
           <div className="flex flex-wrap gap-3">
             {objects.map(obj => (
               <div
@@ -211,7 +237,7 @@ export function HiddenObjectGame({ dayData, onComplete, onBack }: HiddenObjectGa
         {/* Encouragement */}
         {foundCount > 0 && foundCount < totalCount && (
           <p className="text-center text-muted-foreground mt-6 animate-gentle-fade">
-            {totalCount - foundCount === 1 
+            {totalCount - foundCount === 1
               ? "Just one more to find. Take your time."
               : `${totalCount - foundCount} more to discover. No rush.`}
           </p>
