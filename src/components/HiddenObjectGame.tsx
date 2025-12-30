@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eye, EyeOff, Check, ArrowLeft, Sparkles } from 'lucide-react';
+import { Check, ArrowLeft, Sparkles, Eye, EyeOff } from 'lucide-react';
 import greenParkImage from '@/assets/green_park.webp';
-import { createDailyHiddenObjectState } from '@/lib/hiddenObjectGame';
+import { createDailyGameState, HiddenObject } from '@/lib/hiddenObjectGame';
 
 interface HiddenObjectGameProps {
   dayNumber: number;
@@ -11,35 +10,48 @@ interface HiddenObjectGameProps {
   onBack: () => void;
 }
 
-const dayToSeed = (dayNumber: number) => 20250000 + dayNumber * 1013;
-
 export const HiddenObjectGame: React.FC<HiddenObjectGameProps> = ({
   dayNumber,
   onComplete,
   onBack,
 }) => {
-  const [foundTargets, setFoundTargets] = useState<string[]>([]);
+  const [foundObjects, setFoundObjects] = useState<string[]>([]);
   const [showHints, setShowHints] = useState(false);
   const [lastFound, setLastFound] = useState<string | null>(null);
+  const [wrongClick, setWrongClick] = useState<{ x: number; y: number } | null>(null);
 
-  const daily = useMemo(() => {
-    return createDailyHiddenObjectState({
-      seed: dayToSeed(dayNumber),
-      targetsCount: 8,
-      decoyCount: 20,
-    });
+  // Generate daily game state - different targets each day
+  const gameState = useMemo(() => {
+    return createDailyGameState(dayNumber, 5); // 5 objects to find per day
   }, [dayNumber]);
 
-  const handleObjectClick = (objectId: string, isTarget: boolean) => {
-    if (!isTarget) return;
-    if (foundTargets.includes(objectId)) return;
+  const targetIds = useMemo(() => new Set(gameState.targets.map(t => t.id)), [gameState.targets]);
 
-    setFoundTargets(prev => [...prev, objectId]);
-    setLastFound(objectId);
+  const handleObjectClick = (object: HiddenObject) => {
+    // Check if this object is a target
+    if (!targetIds.has(object.id)) {
+      // Wrong object - show brief feedback
+      return;
+    }
+
+    if (foundObjects.includes(object.id)) return;
+
+    setFoundObjects(prev => [...prev, object.id]);
+    setLastFound(object.id);
     setTimeout(() => setLastFound(null), 1500);
   };
 
-  const isComplete = foundTargets.length === daily.targets.length;
+  const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Show "wrong" feedback for clicking on empty areas
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setWrongClick({ x, y });
+    setTimeout(() => setWrongClick(null), 400);
+  };
+
+  const isComplete = foundObjects.length === gameState.targets.length;
 
   if (isComplete) {
     return (
@@ -50,7 +62,7 @@ export const HiddenObjectGame: React.FC<HiddenObjectGameProps> = ({
           </div>
           <h2 className="font-display text-3xl text-foreground mb-4">Wonderful!</h2>
           <p className="text-muted-foreground text-lg mb-8">
-            You found all the objects for today.
+            You found all the hidden objects for today.
             <br />
             Take a slow breath and enjoy this little moment.
           </p>
@@ -69,141 +81,130 @@ export const HiddenObjectGame: React.FC<HiddenObjectGameProps> = ({
   }
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-cream p-4 md:p-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <header className="flex items-center justify-between mb-6">
-            <Button variant="ghost" onClick={onBack} className="text-muted-foreground">
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
-            </Button>
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Day {dayNumber}</p>
-              <h1 className="font-display text-xl text-foreground">Find the Hidden Objects</h1>
-            </div>
-            <Button
-              variant="ghost"
-              onClick={() => setShowHints(prev => !prev)}
-              className="text-muted-foreground"
-              aria-label={showHints ? 'Hide hints' : 'Show hints'}
-            >
-              {showHints ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </Button>
-          </header>
+    <div className="min-h-screen bg-cream p-4 md:p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <header className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={onBack} className="text-muted-foreground">
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back
+          </Button>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Day {dayNumber}</p>
+            <h1 className="font-display text-xl text-foreground">Find the Hidden Objects</h1>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => setShowHints(prev => !prev)}
+            className="text-muted-foreground"
+            aria-label={showHints ? 'Hide hints' : 'Show hints'}
+          >
+            {showHints ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </Button>
+        </header>
 
-          {/* Game Area */}
-          <section className="relative rounded-3xl overflow-hidden shadow-card mb-6">
-            <img
-              src={greenParkImage}
-              alt="A peaceful garden park scene with a wooden bench, flowers, and greenery"
-              className="w-full h-auto block"
-              draggable={false}
-            />
+        {/* Game Area - Click directly on objects in the image */}
+        <section 
+          className="relative rounded-3xl overflow-hidden shadow-card mb-6 cursor-crosshair"
+          onClick={handleImageClick}
+        >
+          <img
+            src={greenParkImage}
+            alt="A peaceful garden park scene"
+            className="w-full h-auto block select-none pointer-events-none"
+            draggable={false}
+          />
 
-            {/* Object buttons (many decoys + a few targets). Buttons sit directly on top of the object icons. */}
-            {daily.placements.map(({ object, location, isTarget }) => {
-              const isFound = isTarget && foundTargets.includes(object.id);
-              const showTargetHint = showHints && isTarget && !isFound;
+          {/* Clickable hitboxes over actual objects - NO visible emojis */}
+          {gameState.targets.map((object) => {
+            const isFound = foundObjects.includes(object.id);
+            const showHint = showHints && !isFound;
 
-              return (
-                <button
-                  key={`${object.id}_${location.id}`}
-                  type="button"
-                  onClick={() => handleObjectClick(object.id, isTarget)}
-                  disabled={isFound}
-                  aria-label={isTarget ? `Find ${object.name}` : `Decorative ${object.name}`}
-                  className={
-                    "absolute rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber focus:ring-offset-2 " +
-                    (isFound
-                      ? 'bg-sage/45'
-                      : showTargetHint
-                        ? 'bg-amber/25 hover:bg-amber/35'
-                        : 'bg-cream/10 hover:bg-cream/20')
-                  }
-                  style={{
-                    left: `${location.x}%`,
-                    top: `${location.y}%`,
-                    width: `${location.width}%`,
-                    height: `${location.height}%`,
-                  }}
-                >
-                  <span
-                    className={
-                      'absolute inset-0 flex items-center justify-center select-none ' +
-                      (isTarget ? 'text-2xl' : 'text-xl opacity-80')
-                    }
-                  >
-                    {object.emoji}
+            return (
+              <button
+                key={object.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleObjectClick(object);
+                }}
+                disabled={isFound}
+                aria-label={`Find ${object.name}`}
+                className={`absolute transition-all duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber focus:ring-offset-2 ${
+                  isFound
+                    ? 'bg-sage/40 ring-2 ring-sage/60'
+                    : showHint
+                      ? 'bg-amber/20 ring-2 ring-amber/50 animate-pulse'
+                      : 'hover:bg-cream/20'
+                }`}
+                style={{
+                  left: `${object.x}%`,
+                  top: `${object.y}%`,
+                  width: `${object.width}%`,
+                  height: `${object.height}%`,
+                }}
+              >
+                {isFound && (
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <Check className="w-8 h-8 text-sage drop-shadow-lg" />
                   </span>
+                )}
+              </button>
+            );
+          })}
 
-                  {showTargetHint && (
-                    <span className="absolute inset-0 rounded-lg border-2 border-amber/70" />
-                  )}
+          {/* Wrong click feedback */}
+          {wrongClick && (
+            <div
+              className="absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 pointer-events-none animate-ping"
+              style={{ left: `${wrongClick.x}%`, top: `${wrongClick.y}%` }}
+            >
+              <div className="w-full h-full rounded-full bg-red-400/30" />
+            </div>
+          )}
 
-                  {isFound && (
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <Check className="w-7 h-7 text-white drop-shadow-lg" />
-                    </span>
-                  )}
-                </button>
+          {/* Found notification */}
+          {lastFound && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-cream/95 backdrop-blur-sm px-6 py-3 rounded-full shadow-soft animate-gentle-fade">
+              <p className="text-sage font-medium flex items-center gap-2">
+                <Check className="w-5 h-5" />
+                Found: {gameState.targets.find(o => o.id === lastFound)?.name}
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* Objects to find - shown as a text list */}
+        <section className="bg-cream-dark/50 rounded-2xl p-6">
+          <h2 className="font-display text-lg text-foreground mb-4 text-center">
+            Find these objects ({foundObjects.length}/{gameState.targets.length})
+          </h2>
+
+          <div className="flex flex-wrap gap-3 justify-center">
+            {gameState.targets.map(obj => {
+              const isFound = foundObjects.includes(obj.id);
+              return (
+                <div
+                  key={obj.id}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    isFound
+                      ? 'bg-sage/20 text-sage line-through'
+                      : 'bg-cream text-foreground'
+                  }`}
+                >
+                  {obj.name}
+                  {isFound && <Check className="w-4 h-4 inline ml-2" />}
+                </div>
               );
             })}
+          </div>
+        </section>
 
-            {/* Found notification */}
-            {lastFound && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-cream/95 backdrop-blur-sm px-6 py-3 rounded-full shadow-soft animate-gentle-fade">
-                <p className="text-sage font-medium flex items-center gap-2">
-                  <Check className="w-5 h-5" />
-                  Found: {daily.targets.find(o => o.id === lastFound)?.name}
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* Objects to find (icons, not words) */}
-          <section className="bg-cream-dark/50 rounded-2xl p-6">
-            <h2 className="font-display text-lg text-foreground mb-4 text-center">
-              Find these objects ({foundTargets.length}/{daily.targets.length})
-            </h2>
-
-            <div className="flex flex-wrap gap-3 justify-center">
-              {daily.targets.map(obj => {
-                const isFound = foundTargets.includes(obj.id);
-                return (
-                  <Tooltip key={obj.id}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={
-                          'relative w-14 h-14 rounded-xl grid place-items-center transition-all ' +
-                          (isFound ? 'bg-sage/20 opacity-55' : 'bg-cream')
-                        }
-                        aria-label={obj.name}
-                      >
-                        <span className="text-3xl" role="img" aria-hidden>
-                          {obj.emoji}
-                        </span>
-                        {isFound && (
-                          <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-sage/25 grid place-items-center">
-                            <Check className="w-4 h-4 text-sage" />
-                          </span>
-                        )}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{obj.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </section>
-
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            {showHints ? 'Hints showing • Tap eye to hide' : 'Need help? Tap the eye icon for hints'}
-          </p>
-        </div>
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          Click directly on objects in the scene to find them
+          {showHints ? ' • Hints are showing' : ' • Tap the eye icon for hints'}
+        </p>
       </div>
-    </TooltipProvider>
+    </div>
   );
 };

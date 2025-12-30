@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft, RotateCcw, FastForward } from 'lucide-react';
 import { AccessibilitySettings } from '@/types/calendar';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,7 @@ interface SettingsPanelProps {
     value: AccessibilitySettings[K]
   ) => void;
   onResetCalendar: () => void;
+  onUnlockAllDays?: () => void;
   onBack: () => void;
 }
 
@@ -17,6 +18,7 @@ export function SettingsPanel({
   settings,
   onUpdateSetting,
   onResetCalendar,
+  onUnlockAllDays,
   onBack,
 }: SettingsPanelProps) {
   const textSizeOptions: { value: AccessibilitySettings['textSize']; label: string }[] = [
@@ -127,8 +129,28 @@ export function SettingsPanel({
             </div>
           </div>
 
+          {/* Unlock All Days (for testing) */}
+          {onUnlockAllDays && (
+            <div className="card-gentle animate-gentle-fade" style={{ animationDelay: '400ms' }}>
+              <h2 className="font-display font-semibold text-foreground mb-2">
+                Unlock All Days
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Skip the daily wait and unlock all 30 days immediately.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={onUnlockAllDays}
+              >
+                <FastForward className="w-5 h-5 mr-2" />
+                Unlock All Days
+              </Button>
+            </div>
+          )}
+
           {/* Reset Calendar */}
-          <div className="card-gentle animate-gentle-fade border-2 border-destructive/20" style={{ animationDelay: '400ms' }}>
+          <div className="card-gentle animate-gentle-fade border-2 border-destructive/20" style={{ animationDelay: '500ms' }}>
             <h2 className="font-display font-semibold text-foreground mb-2">
               Start Fresh
             </h2>
