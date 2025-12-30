@@ -18,6 +18,7 @@ const Index = () => {
     markDayOpened, 
     markDayCompleted, 
     resetCalendar,
+    unlockAllDays,
     currentDay 
   } = useCalendarState();
   
@@ -87,6 +88,7 @@ const Index = () => {
           settings={settings}
           onUpdateSetting={updateSetting}
           onResetCalendar={handleResetCalendar}
+          onUnlockAllDays={unlockAllDays}
           onBack={() => setCurrentView('welcome')}
         />
       )}

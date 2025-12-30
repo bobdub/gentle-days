@@ -51,11 +51,28 @@ export function useCalendarState() {
   const [state, setState] = useState<CalendarState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        ...parsed,
-        startDate: new Date(parsed.startDate),
-      };
+      try {
+        const parsed = JSON.parse(saved);
+        const startDate = new Date(parsed.startDate);
+        
+        // Calculate how many days have passed since start
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+        const diffTime = now.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const currentDay = Math.min(Math.max(1, diffDays), 30);
+        
+        return {
+          ...parsed,
+          startDate,
+          currentDay,
+          completedDays: parsed.completedDays || [],
+          openedDays: parsed.openedDays || [],
+        };
+      } catch {
+        // If parsing fails, start fresh
+      }
     }
     return {
       startDate: new Date(),
@@ -134,12 +151,26 @@ export function useCalendarState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   }, []);
 
+  // Unlock all days by setting start date to 30 days ago
+  const unlockAllDays = useCallback(() => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+    const newState = {
+      ...state,
+      startDate: thirtyDaysAgo,
+      currentDay: 30,
+    };
+    setState(newState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+  }, [state]);
+
   return {
     state,
     getDayData,
     markDayOpened,
     markDayCompleted,
     resetCalendar,
+    unlockAllDays,
     currentDay: calculateCurrentDay(),
   };
 }
